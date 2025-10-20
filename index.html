@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <title>Icegard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    #map {
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    const img = new Image();
+    img.src = "Icegard.jpg";
+
+    const imgZoomed = new Image();
+    imgZoomed.src = "Icegard2.jpg";
+
+    let map;
+    let currentImageOverlay;
+    let initialZoomLevel;
+    let isZoomedIn = false;
+
+    img.onload = function () {
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+
+      const bounds = [[0, 0], [h, w]];
+
+      map = L.map("map", {
+        crs: L.CRS.Simple,
+        // Zostawiamy bezpieczny, bardzo niski minZoom, aby fitBounds działało poprawnie
+        minZoom: -5, 
+        maxZoom: 5,
+        maxBounds: bounds,
+        maxBoundsViscosity: 1.0,
+        zoomSnap: 0.1
+      });
+
+      currentImageOverlay = L.imageOverlay(img.src, bounds).addTo(map);
+
+      map.fitBounds(bounds);
+      initialZoomLevel = map.getZoom();
+
+      // **NAPRAWA BLOKOWANIA ODDALANIA:**
+      // Zamiast ustawiać minZoom, używamy maxBounds, aby blokować ruch poza granice.
+      // Aby zablokować oddalanie, wymuszamy ustawienie minZoom na obliczony initialZoomLevel.
+      // Wykonujemy tę operację po małym opóźnieniu (timeout) - to kluczowe dla CRS.Simple!
+      setTimeout(() => {
+          map.setMinZoom(initialZoomLevel);
+      }, 50);
+
+      map.on('zoomend', function () {
+        const currentZoom = map.getZoom();
+
+        // Używamy progu 1.0, aby opóźnić zmianę obrazu
+        if (currentZoom >= initialZoomLevel + 1.0 && !isZoomedIn) {
+          map.removeLayer(currentImageOverlay);
+          currentImageOverlay = L.imageOverlay(imgZoomed.src, bounds).addTo(map);
+          isZoomedIn = true;
+          console.log('Obraz został zmieniony na powiększony.');
+        }
+
+        // Warunek powrotu do początkowego obrazu
+        if (currentZoom <= initialZoomLevel && isZoomedIn) {
+          map.removeLayer(currentImageOverlay);
+          currentImageOverlay = L.imageOverlay(img.src, bounds).addTo(map);
+          isZoomedIn = false;
+          console.log('Obraz został zmieniony z powrotem na początkowy.');
+        }
+      });
+    };
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
